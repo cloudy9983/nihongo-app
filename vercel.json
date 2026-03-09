@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "crons": [
+    {
+      "path": "/api/daily-push",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

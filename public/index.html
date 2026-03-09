@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>にほんごれんしゅう</title>
+<!-- LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Press Start 2P',monospace;background:#1a1a2e;color:#f0f0f0;min-height:100vh;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+#gameScreen.active{justify-content:flex-start;}
+
+/* Loading */
+#loadScreen{background:#1a1a2e;}
+.load-txt{font-size:10px;color:#ffd700;text-align:center;animation:blink .8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* Title */
+.title{font-size:15px;color:#ffd700;text-shadow:3px 3px 0 #e94560;text-align:center;margin-bottom:6px;}
+.subtitle{font-size:8px;color:#ff69b4;margin-bottom:6px;text-align:center;}
+.user-bar{background:#16213e;border:2px solid #ffd700;padding:8px 14px;margin-bottom:20px;font-size:7px;color:#00ff88;display:flex;align-items:center;gap:10px;border-radius:0;}
+.user-ava{width:30px;height:30px;border-radius:50%;border:2px solid #ffd700;}
+.streak{font-size:7px;color:#ff69b4;margin-bottom:16px;}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:660px;width:100%;}
+.card{background:#16213e;border:3px solid #ffd700;box-shadow:4px 4px 0 #000;padding:14px 8px;text-align:center;cursor:pointer;}
+.card:hover{background:#1e2f5e;}
+.card:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000;}
+.card-icon{font-size:30px;margin-bottom:8px;}
+.card-jp{font-size:7px;color:#ffd700;margin-bottom:4px;}
+.card-en{font-size:6px;color:#888;}
+.card-done{position:relative;}
+.card-done::after{content:"✅";position:absolute;top:4px;right:6px;font-size:12px;}
+
+/* share button */
+.share-btn{background:#06C755;color:#fff;border:none;padding:10px 20px;font-family:inherit;font-size:7px;cursor:pointer;margin-top:14px;border:2px solid #fff;}
+.share-btn:hover{background:#05a847;}
+
+/* Header */
+.header{width:100%;background:#16213e;border-bottom:3px solid #ffd700;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
+.btn-back{background:#e94560;color:#fff;border:2px solid #fff;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:7px;}
+.h-label{font-size:8px;color:#ffd700;}
+.h-turn{font-size:7px;color:#00ff88;}
+
+/* Play area */
+.play{width:100%;max-width:700px;padding:12px;display:flex;flex-direction:column;gap:11px;}
+.chars{display:flex;justify-content:space-between;align-items:flex-end;}
+.cbox{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.sprite{width:80px;height:80px;background:#16213e;border:3px solid #f0f0f0;box-shadow:3px 3px 0 #000;display:flex;align-items:center;justify-content:center;font-size:44px;}
+.sprite.npc-talk{border-color:#00bfff;animation:bob .4s infinite alternate;}
+.sprite.user-talk{border-color:#ff69b4;animation:bob .4s infinite alternate;}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-6px)}}
+.cname{font-size:6px;color:#00bfff;}
+.speech{background:#000d1a;border:3px solid #f0f0f0;box-shadow:4px 4px 0 #000;padding:12px 14px;min-height:76px;}
+.s-cursor{color:#ffd700;animation:blink .8s infinite;margin-right:5px;}
+#npcText{font-size:8px;line-height:2.2;word-break:break-all;}
+#npcSub{font-size:6px;color:#666;margin-top:6px;font-family:sans-serif;font-weight:400;line-height:1.7;}
+#userSaid{display:none;background:#1a001a;border:3px solid #ff69b4;box-shadow:3px 3px 0 #000;padding:9px 12px;font-size:8px;color:#ff69b4;line-height:2;}
+#timerWrap{display:none;flex-direction:column;gap:5px;}
+.t-label{display:flex;justify-content:space-between;font-size:7px;color:#ffd700;}
+.t-outer{height:12px;background:#333;border:2px solid #00ff88;overflow:hidden;}
+#tBar{height:100%;width:100%;background:#00ff88;transition:width 1s linear,background .3s;}
+#tBar.warn{background:#ffd700;}
+#tBar.danger{background:#e94560;}
+#hintWrap{display:none;background:#1a1000;border:3px solid #ffd700;box-shadow:3px 3px 0 #000;padding:10px;font-size:7px;color:#ffd700;line-height:2.2;}
+#recWrap{display:none;align-items:center;gap:8px;font-size:7px;color:#e94560;justify-content:center;padding:4px;}
+.rdot{width:10px;height:10px;background:#e94560;border-radius:50%;animation:rb .5s infinite;}
+@keyframes rb{0%,100%{opacity:1}50%{opacity:0}}
+#status{font-size:7px;color:#00bfff;text-align:center;min-height:16px;line-height:2;word-break:break-all;padding:2px;}
+#fbWrap{display:none;background:#001a0d;border:3px solid #00ff88;box-shadow:4px 4px 0 #000;padding:12px;font-size:7px;line-height:2.2;}
+.fb-t{color:#00ff88;font-size:8px;margin-bottom:6px;}
+.fb-r{color:#f0f0f0;margin-bottom:4px;}
+.fb-a{color:#ffd700;margin-top:6px;}
+#scoreWrap{display:none;flex-direction:column;align-items:center;gap:12px;background:#16213e;border:3px solid #ffd700;box-shadow:4px 4px 0 #000;padding:22px;text-align:center;}
+.sc-t{font-size:13px;color:#ffd700;text-shadow:3px 3px 0 #e94560;}
+.sc-v{font-size:44px;color:#00ff88;text-shadow:4px 4px 0 #000;}
+.sc-r{font-size:9px;}
+.ctrls{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;padding-bottom:16px;}
+.btn{background:#16213e;border:3px solid #f0f0f0;box-shadow:3px 3px 0 #000;color:#f0f0f0;padding:9px 12px;cursor:pointer;font-family:inherit;font-size:7px;line-height:1.8;min-width:100px;text-align:center;}
+.btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:4px 4px 0 #000;}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 #000;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.g{border-color:#00ff88;color:#00ff88;}
+.y{border-color:#ffd700;color:#ffd700;}
+.b{border-color:#00bfff;color:#00bfff;}
+.r{border-color:#e94560;color:#e94560;}
+#btnNext{display:none;}
+@media(max-width:500px){.grid{grid-template-columns:repeat(2,1fr);}.sprite{width:66px;height:66px;font-size:38px;}.title{font-size:11px;}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadScreen" class="screen active">
+  <div class="load-txt">🌸 よみこみちゅう...<br><br>LOADING...</div>
+</div>
+
+<!-- TITLE -->
+<div id="titleScreen" class="screen">
+  <div class="title">🌸 にほんご れんしゅう 🌸</div>
+  <div class="subtitle">JAPANESE LIFE SIMULATOR</div>
+
+  <!-- LINE user info bar -->
+  <div class="user-bar" id="userBar" style="display:none">
+    <img class="user-ava" id="userAva" src="" alt="">
+    <div>
+      <div id="userName" style="color:#ffd700">---</div>
+      <div style="color:#aaa;font-size:6px;margin-top:3px;">今日も がんばろう！</div>
+    </div>
+  </div>
+
+  <div class="streak" id="streakDisplay">🔥 れんぞく: <span id="streakNum">0</span> にち</div>
+
+  <div class="grid" id="cardGrid">
+    <div class="card" data-key="restaurant"><div class="card-icon">🍜</div><div class="card-jp">レストラン</div><div class="card-en">Restaurant</div></div>
+    <div class="card" data-key="hotel"><div class="card-icon">🏨</div><div class="card-jp">ホテル</div><div class="card-en">Hotel</div></div>
+    <div class="card" data-key="selfintro"><div class="card-icon">👋</div><div class="card-jp">じこしょうかい</div><div class="card-en">Self Intro</div></div>
+    <div class="card" data-key="shopping"><div class="card-icon">🛍️</div><div class="card-jp">かいもの</div><div class="card-en">Shopping</div></div>
+    <div class="card" data-key="doctor"><div class="card-icon">🏥</div><div class="card-jp">びょういん</div><div class="card-en">Hospital</div></div>
+    <div class="card" data-key="interview"><div class="card-icon">💼</div><div class="card-jp">めんせつ</div><div class="card-en">Interview</div></div>
+  </div>
+
+  <button class="share-btn" id="shareBtn">💚 LINEで ともだちに シェア</button>
+  <div style="margin-top:12px;font-size:6px;color:#444;text-align:center;">Chrome/LINE内ブラウザ推奨 · マイク許可が必要</div>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="screen">
+  <div class="header">
+    <button class="btn-back" id="btnBack">◀ もどる</button>
+    <div class="h-label" id="hLabel">🍜 レストラン</div>
+    <div class="h-turn" id="hTurn">TURN 1/3</div>
+  </div>
+  <div class="play">
+    <div class="chars">
+      <div class="cbox"><div class="sprite" id="npcSprite">🧑‍🍳</div><div class="cname" id="npcName">ウエイター</div></div>
+      <div style="font-size:11px;color:#333;padding-bottom:26px;">⚔</div>
+      <div class="cbox"><div class="sprite" id="playerSprite" style="border-color:#ff69b4;">🧑</div><div class="cname" style="color:#ff69b4;">あなた</div></div>
+    </div>
+    <div class="speech"><span class="s-cursor">▶</span><span id="npcText">よみこみちゅう...</span><div id="npcSub"></div></div>
+    <div id="userSaid">🎤 あなた: <span id="userSaidText"></span></div>
+    <div id="timerWrap"><div class="t-label"><span>⏱ のこり</span><span id="tNum">15</span></div><div class="t-outer"><div id="tBar"></div></div></div>
+    <div id="hintWrap"></div>
+    <div id="recWrap"><div class="rdot"></div><span>● REC ― はなしてください！</span></div>
+    <div id="status">よみこみちゅう...</div>
+    <div id="fbWrap"><div class="fb-t">📊 フィードバック</div><div id="fbContent"></div></div>
+    <div id="scoreWrap">
+      <div class="sc-t">🎉 クリア！ CLEAR! 🎉</div>
+      <div class="sc-v" id="scVal">0</div>
+      <div style="font-size:7px;color:#888;">POINTS</div>
+      <div class="sc-r" id="scRank"></div>
+      <button class="btn y" id="btnReplay">▶ もどる</button>
+      <button class="share-btn" id="shareClear" style="font-size:7px;padding:8px 14px;">💚 スコアを LINEで シェア</button>
+    </div>
+    <div class="ctrls" id="ctrls">
+      <button class="btn g" id="btnSpeak" disabled>🎤 はなす<br><span style="font-size:6px;color:#888;">SPEAK</span></button>
+      <button class="btn y" id="btnHint" disabled>💡 ヒント<br><span style="font-size:6px;color:#888;">HINT</span></button>
+      <button class="btn b" id="btnRepeat" disabled>🔁 もういちど<br><span style="font-size:6px;color:#888;">REPEAT</span></button>
+      <button class="btn r" id="btnNext">▶▶ つぎへ<br><span style="font-size:6px;color:#888;">NEXT</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ---- LIFF ID: GitHub Pages にデプロイ後、ここを書き換えてください ----
+var LIFF_ID = "YOUR_LIFF_ID_HERE";
+// ---- LIFF URL (自分のものに変えてください) ----
+var LIFF_URL = "https://liff.line.me/" + LIFF_ID;
+
+// ===== SCENARIO DATA =====
+var SC = {
+  restaurant:{label:"🍜 レストラン",npc:"🧑‍🍳",npcName:"ウエイター",player:"🧑",
+    turns:[
+      {jp:"いらっしゃいませ！
+なんめいさまですか？",en:"Welcome! How many people?",
+       hint:"💡「ひとりです」「ふたりです」
+→ hitori desu / futari desu",
+       good:["ひとり","一人","ふたり","二人","さんにん","にん"],
+       fb:{g:"自然な日本語表現です",n:"「〜です」をつけると丁寧",b:"「ふたりです。よろしくおねがいします。」"}},
+      {jp:"こちらへ どうぞ。
+ご注文は おきまりですか？",en:"Ready to order?",
+       hint:"💡「〜を ください」「〜を おねがいします」",
+       good:["ください","おねがい","注文","ラーメン","うどん","定食"],
+       fb:{g:"注文の表現がよかった",n:"「いただけますか」より丁寧",b:"「ラーメンをひとつおねがいします。」"}},
+      {jp:"ありがとうございます。
+お会計は ご一緒ですか？",en:"Bill together?",
+       hint:"💡「いっしょに おねがいします」「べつべつに」",
+       good:["いっしょ","一緒","べつ","別","かいけい"],
+       fb:{g:"会計表現がうまく言えました",n:"「おあいそ」も通じます",b:"「いっしょにおねがいします。」"}}
+    ]},
+  hotel:{label:"🏨 ホテル",npc:"💁",npcName:"フロント",player:"🧳",
+    turns:[
+      {jp:"いらっしゃいませ。
+ご予約は ございますか？",en:"Do you have a reservation?",
+       hint:"💡「よやくを しています」
+→ yoyaku wo shite imasu",
+       good:["よやく","予約","しています","あります","名前"],
+       fb:{g:"予約確認の表現がよい",n:"「〜と申します」が丁寧",b:"「田中と申します。予約しております。」"}},
+      {jp:"かしこまりました。
+チェックインは 15時からです。",en:"Check-in from 3PM.",
+       hint:"💡「わかりました」「へやは なんごうしつですか？」",
+       good:["わかりました","ありがとう","なんじ","へや","部屋"],
+       fb:{g:"受け答えが自然でした",n:"「〜でよろしいでしょうか」が丁寧",b:"「ありがとうございます。何号室ですか？」"}},
+      {jp:"302号室です。
+ご不明な点は ございますか？",en:"Room 302. Any questions?",
+       hint:"💡「〜はどこですか？」
+→ doko desu ka",
+       good:["どこ","おしえて","バス","朝食","ちょうしょく"],
+       fb:{g:"質問の仕方が上手",n:"施設の場所を積極的に聞こう",b:"「朝食はどこで食べられますか？」"}}
+    ]},
+  selfintro:{label:"👋 じこしょうかい",npc:"😊",npcName:"さくらさん",player:"🙋",
+    turns:[
+      {jp:"はじめまして！
+わたしは さくらです。よろしく！",en:"Nice to meet you! I am Sakura!",
+       hint:"💡「はじめまして、〜です。よろしくおねがいします。」",
+       good:["はじめまして","です","よろしく","もうします"],
+       fb:{g:"自己紹介の基本が使えています",n:"「〜と申します」はより丁寧",b:"「はじめまして、〜と申します。よろしくお願いします。」"}},
+      {jp:"どこから きましたか？
+にほんは はじめてですか？",en:"Where are you from?",
+       hint:"💡「〜からきました」「はじめてです」",
+       good:["から","きました","はじめて","たいわん","台湾"],
+       fb:{g:"出身地の表現がよい",n:"何回目かも話すと盛り上がる",b:"「台湾から来ました。日本は2回目です！」"}},
+      {jp:"そうなんですね！
+にほんの どんなことが すきですか？",en:"What do you like about Japan?",
+       hint:"💡「〜が すきです」
+→ 〜 ga suki desu",
+       good:["すき","好き","たのしい","おいしい","食べ物","アニメ"],
+       fb:{g:"好みの表現ができています",n:"理由も話すと自然",b:"「食べ物が大好きです！ラーメンが最高ですね。」"}}
+    ]},
+  shopping:{label:"🛍️ かいもの",npc:"🛒",npcName:"てんいん",player:"💳",
+    turns:[
+      {jp:"いらっしゃいませ！
+なにか おさがしですか？",en:"Looking for something?",
+       hint:"💡「〜を さがしています」
+→ sagashite imasu",
+       good:["さがして","あります","ください","みせて"],
+       fb:{g:"探し物の表現がうまい",n:"サイズや色も伝えると親切",b:"「青いTシャツを探しています。Mサイズはありますか？」"}},
+      {jp:"こちらは いかがですか？
+ただいま 20%オフです。",en:"How about this? 20% off.",
+       hint:"💡「ためしても いいですか？」「いくらですか？」",
+       good:["ためし","いくら","値段","きにいった"],
+       fb:{g:"許可を求める表現ができた",n:"「〜てもよろしいですか」が丁寧",b:"「試着してもよろしいですか？」"}},
+      {jp:"こちらで よろしいですか？
+げんきんですか？",en:"Cash payment?",
+       hint:"💡「カードで はらえますか？」",
+       good:["カード","げんきん","現金","はらい","支払い"],
+       fb:{g:"支払い表現が自然",n:"ポイントカードも聞いてみよう",b:"「カードで支払えますか？」"}}
+    ]},
+  doctor:{label:"🏥 びょういん",npc:"👨‍⚕️",npcName:"お医者さん",player:"🤒",
+    turns:[
+      {jp:"どうぞ おかけください。
+きょうは どうされましたか？",en:"What brings you in?",
+       hint:"💡「〜が いたいです」「ねつが あります」",
+       good:["いたい","痛い","ねつ","熱","せき","わるい","頭","おなか"],
+       fb:{g:"症状が伝わりました",n:"いつからかも伝えると良い",b:"「昨日から頭が痛くて、熱も38度あります。」"}},
+      {jp:"いつから しょうじょうが ありますか？",en:"Since when?",
+       hint:"💡「きのうから」「〜にちまえから」",
+       good:["きのう","昨日","まえ","前","あさ","三日"],
+       fb:{g:"時間の表現が上手",n:"「〜ほど前から」も使える",b:"「3日前から症状があります。」"}},
+      {jp:"お薬を だします。
+アレルギーは ありますか？",en:"Any allergies?",
+       hint:"💡「〜アレルギーが あります」「とくに ありません」",
+       good:["アレルギー","あります","ありません","なし"],
+       fb:{g:"アレルギー情報が伝えられた",n:"薬の飲み方も確認しよう",b:"「特にアレルギーはありません。」"}}
+    ]},
+  interview:{label:"💼 めんせつ",npc:"👔",npcName:"めんせつかん",player:"🤵",
+    turns:[
+      {jp:"では はじめましょう。
+じこしょうかいを おねがいします。",en:"Please introduce yourself.",
+       hint:"💡「わたしは〜と もうします。〜だいがくで〜をせんこうしました。」",
+       good:["もうします","申します","せんこう","大学","そつぎょう","情報"],
+       fb:{g:"自己紹介の構成がしっかりしている",n:"話すスピードも意識しよう",b:"「〜と申します。政治大学で情報科学を専攻しています。」"}},
+      {jp:"なぜ わが社を えらびましたか？",en:"Why our company?",
+       hint:"💡「〜に みりょくを かんじました」",
+       good:["きょうみ","みりょく","魅力","したい","AI","技術"],
+       fb:{g:"志望動機が自然だった",n:"具体例を交えると説得力UP",b:"「御社のAI技術に魅力を感じ、活かしたいと思いました。」"}},
+      {jp:"さいごに しつもんは ありますか？",en:"Any questions?",
+       hint:"💡「〜について おきかせねがえますか？」",
+       good:["しつもん","質問","おきかせ","にゅうしゃ","チーム","仕事"],
+       fb:{g:"質問の仕方が丁寧",n:"逆質問で熱意を見せよう",b:"「入社後のプロジェクトについて教えていただけますか？」"}}
+    ]}
+};
+
+// ===== STATE =====
+var cur=null,turnIdx=0,score=0,rec=null,timerIv=null,timerSec=15,autoT=null;
+var todayDone={};
+var streak=0;
+
+// ===== HELPERS =====
+function S(id){return document.getElementById(id);}
+function show(id){S(id).style.display="block";}
+function hide(id){S(id).style.display="none";}
+function flex(id){S(id).style.display="flex";}
+function st(msg){S("status").textContent=msg;}
+
+// ===== LOCAL STORAGE: STREAK =====
+function loadStreak(){
+  try{
+    var data=JSON.parse(localStorage.getItem("nihongo_streak")||"{}");
+    var today=new Date().toDateString();
+    if(data.lastDate===today){
+      todayDone=data.done||{};
+      streak=data.streak||0;
+    } else {
+      var yesterday=new Date(Date.now()-86400000).toDateString();
+      streak=(data.lastDate===yesterday)?(data.streak||0)+1:1;
+      todayDone={};
+    }
+    S("streakNum").textContent=streak;
+    updateCardBadges();
+  }catch(e){}
+}
+function saveProgress(key){
+  try{
+    todayDone[key]=true;
+    var today=new Date().toDateString();
+    localStorage.setItem("nihongo_streak",JSON.stringify({lastDate:today,done:todayDone,streak:streak}));
+    S("streakNum").textContent=streak;
+    updateCardBadges();
+  }catch(e){}
+}
+function updateCardBadges(){
+  var cards=document.querySelectorAll(".card");
+  for(var i=0;i<cards.length;i++){
+    var k=cards[i].getAttribute("data-key");
+    if(todayDone[k]) cards[i].classList.add("card-done");
+    else cards[i].classList.remove("card-done");
+  }
+}
+
+// ===== LIFF INIT =====
+function initLiff(){
+  if(LIFF_ID==="YOUR_LIFF_ID_HERE"){
+    // Dev mode: skip LIFF
+    S("loadScreen").className="screen";
+    S("titleScreen").className="screen active";
+    loadStreak();
+    return;
+  }
+  liff.init({liffId:LIFF_ID}).then(function(){
+    S("loadScreen").className="screen";
+    S("titleScreen").className="screen active";
+    loadStreak();
+    if(liff.isLoggedIn()){
+      liff.getProfile().then(function(p){
+        S("userName").textContent=p.displayName;
+        S("userAva").src=p.pictureUrl||"";
+        flex("userBar");
+      }).catch(function(){});
+    } else {
+      liff.login();
+    }
+  }).catch(function(e){
+    S("loadScreen").className="screen";
+    S("titleScreen").className="screen active";
+    loadStreak();
+    console.log("LIFF init error:",e);
+  });
+}
+
+// ===== SHARE =====
+function shareToLine(msg){
+  if(liff.isInClient&&liff.isInClient()){
+    liff.shareTargetPicker([{type:"text",text:msg}]).catch(function(){});
+  } else {
+    var encoded=encodeURIComponent(msg);
+    window.open("https://line.me/R/share?text="+encoded,"_blank");
+  }
+}
+
+// ===== NAVIGATION =====
+function goTitle(){
+  stopTimer();stopRec();clearTimeout(autoT);
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  S("titleScreen").className="screen active";
+  S("gameScreen").className="screen";
+}
+
+function startGame(key){
+  cur=key;turnIdx=0;score=0;
+  var d=SC[key];
+  S("titleScreen").className="screen";
+  S("gameScreen").className="screen active";
+  S("hLabel").textContent=d.label;
+  S("npcSprite").textContent=d.npc;
+  S("npcName").textContent=d.npcName;
+  S("playerSprite").textContent=d.player;
+  S("npcSub").textContent="";
+  hide("userSaid");hide("hintWrap");hide("fbWrap");hide("scoreWrap");
+  S("ctrls").style.display="flex";
+  hide("btnNext");
+  S("timerWrap").style.display="none";
+  S("recWrap").style.display="none";
+  S("btnSpeak").disabled=true;
+  S("btnHint").disabled=true;
+  S("btnRepeat").disabled=true;
+  rec=makeRec();
+  st("ロード中...");
+  setTimeout(npcTurn,400);
+}
+
+// ===== NPC TURN =====
+function npcTurn(){
+  stopTimer();clearTimeout(autoT);
+  var d=SC[cur];var t=d.turns[turnIdx];
+  S("hTurn").textContent="TURN "+(turnIdx+1)+"/"+d.turns.length;
+  S("npcSprite").className="sprite npc-talk";
+  S("playerSprite").className="sprite";S("playerSprite").style.borderColor="#ff69b4";
+  hide("fbWrap");hide("hintWrap");hide("userSaid");
+  hide("btnNext");S("timerWrap").style.display="none";S("recWrap").style.display="none";
+  S("btnSpeak").disabled=true;S("btnHint").disabled=true;S("btnRepeat").disabled=true;
+  S("npcSub").textContent="";S("npcText").textContent="";
+  st("NPC がはなしています...");
+  typewrite("npcText",t.jp,function(){
+    S("npcSprite").className="sprite";S("npcSprite").style.borderColor="#f0f0f0";
+    S("npcSub").textContent=t.en;
+    S("btnRepeat").disabled=false;
+    st("▶ あなたの ばんです！　じゅんびができたら はなしてね");
+    autoT=setTimeout(userTurn,1400);
+  });
+  tts(t.jp.replace(/
+/g," "));
+}
+
+function typewrite(id,txt,cb){
+  var el=S(id);el.textContent="";var i=0;
+  var iv=setInterval(function(){
+    if(i<txt.length){el.textContent+=txt[i++];}
+    else{clearInterval(iv);if(cb)cb();}
+  },55);
+}
+
+// ===== USER TURN =====
+function userTurn(){
+  S("playerSprite").className="sprite user-talk";
+  S("playerSprite").style.borderColor="#ff69b4";
+  S("btnSpeak").disabled=false;S("btnHint").disabled=false;
+  flex("timerWrap");startTimer();
+  st("🎤 はなしてください！　または ボタンを おしてね");
+  if(rec){try{rec.start();S("recWrap").style.display="flex";}catch(e){console.log("auto rec:",e.message);}}
+}
+
+// ===== SPEECH REC =====
+function makeRec(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){st("⚠️ Chrome/Edge を使ってください");return null;}
+  var r=new SR();
+  r.lang="ja-JP";r.interimResults=false;r.maxAlternatives=3;r.continuous=false;
+  r.onstart=function(){S("recWrap").style.display="flex";st("🔴 録音中... はなしてください！");};
+  r.onresult=function(e){onSpoke(e.results[0][0].transcript);};
+  r.onerror=function(e){
+    S("recWrap").style.display="none";
+    S("playerSprite").className="sprite";S("playerSprite").style.borderColor="#ff69b4";
+    if(e.error==="not-allowed")st("❌ マイクを許可してください");
+    else if(e.error==="no-speech")st("⚠️ もう いちど はなしてください");
+    else st("⚠️ エラー: "+e.error);
+  };
+  r.onend=function(){S("recWrap").style.display="none";};
+  return r;
+}
+function stopRec(){S("recWrap").style.display="none";if(rec){try{rec.stop();}catch(e){}}}
+
+// ===== TIMER =====
+function startTimer(){
+  timerSec=15;updTimer(15);
+  timerIv=setInterval(function(){
+    timerSec--;updTimer(timerSec);
+    if(timerSec<=5&&timerSec>0)st("⚠️ のこり "+timerSec+" びょう！");
+    if(timerSec<=0){stopTimer();timerEnd();}
+  },1000);
+}
+function stopTimer(){clearInterval(timerIv);timerIv=null;}
+function updTimer(s){
+  S("tBar").style.width=(s/15*100)+"%";
+  S("tBar").className=s<=5?"danger":s<=8?"warn":"";
+  S("tNum").textContent=s;
+}
+function timerEnd(){
+  stopRec();S("playerSprite").className="sprite";S("playerSprite").style.borderColor="#ff69b4";
+  doHint();st("⏰ じかんぎれ！ ヒントを みて もう いちど！");S("btnSpeak").disabled=false;
+}
+
+// ===== SPOKE =====
+function onSpoke(txt){
+  stopTimer();stopRec();
+  S("timerWrap").style.display="none";
+  S("playerSprite").className="sprite";S("playerSprite").style.borderColor="#ff69b4";
+  S("btnSpeak").disabled=true;S("btnHint").disabled=true;
+  S("userSaidText").textContent=txt;show("userSaid");
+  st("📝 にんしき: 「"+txt+"」");
+  var t=SC[cur].turns[turnIdx],pts=calcPts(txt,t);
+  score+=pts;
+  setTimeout(function(){doFeedback(txt,t,pts);},400);
+}
+function calcPts(txt,t){
+  var h=0;for(var i=0;i<t.good.length;i++)if(txt.indexOf(t.good[i])>=0)h++;
+  return h>=2?30:h===1?20:txt.length>2?10:5;
+}
+function doFeedback(txt,t,pts){
+  var stars=pts>=30?"⭐⭐⭐":pts>=20?"⭐⭐":"⭐";
+  S("fbContent").innerHTML=
+    "<div class=\"fb-r\">📝 あなた: 「"+txt+"」 "+stars+" +"+pts+"pts</div>"+
+    "<div class=\"fb-r\">✅ ぶんぽう: "+t.fb.g+"</div>"+
+    "<div class=\"fb-r\">💬 しぜんさ: "+t.fb.n+"</div>"+
+    "<div class=\"fb-a\">💡 もっとよくなる いいかた:<br>→ "+t.fb.b+"</div>";
+  show("fbWrap");S("btnNext").style.display="inline-block";
+  tts(t.fb.b);
+}
+
+// ===== CONTROLS =====
+function doHint(){S("hintWrap").innerHTML=SC[cur].turns[turnIdx].hint.replace(/
+/g,"<br>");show("hintWrap");}
+function doRepeat(){tts(SC[cur].turns[turnIdx].jp.replace(/
+/g," "));st("🔁 もう いちど きいてね");}
+function doSpeak(){
+  if(!rec){st("❌ Chrome/Edgeを使ってください");return;}
+  stopTimer();try{rec.stop();}catch(e){}
+  rec=makeRec();
+  setTimeout(function(){try{rec.start();startTimer();st("🔴 録音中...");}catch(e){st("❌ マイクエラー");}},300);
+}
+function doNext(){
+  var d=SC[cur];turnIdx++;
+  hide("fbWrap");hide("hintWrap");hide("userSaid");
+  hide("btnNext");S("npcSub").textContent="";
+  if(turnIdx>=d.turns.length)doScore();else npcTurn();
+}
+function doScore(){
+  S("ctrls").style.display="none";S("timerWrap").style.display="none";
+  saveProgress(cur);
+  var max=SC[cur].turns.length*30,p=score/max,rank,col;
+  if(p>=.9){rank="🏆 かんぺき！ PERFECT!";col="#ffd700";}
+  else if(p>=.7){rank="⭐ すばらしい！ GREAT!";col="#00ff88";}
+  else if(p>=.5){rank="👍 よくできました GOOD!";col="#00bfff";}
+  else{rank="💪 もっとれんしゅう！ KEEP GOING!";col="#ff69b4";}
+  S("scVal").textContent=score;S("scRank").textContent=rank;S("scRank").style.color=col;
+  flex("scoreWrap");st("🎉 おつかれさまでした！");
+}
+
+// ===== TTS =====
+function tts(txt){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(txt);
+  u.lang="ja-JP";u.rate=0.85;u.pitch=1.1;
+  var vs=window.speechSynthesis.getVoices();
+  var jv=vs.find(function(v){return v.lang.indexOf("ja")===0;});
+  if(jv)u.voice=jv;
+  window.speechSynthesis.speak(u);
+}
+if(window.speechSynthesis){
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices();};
+}
+
+// ===== BIND EVENTS =====
+document.addEventListener("DOMContentLoaded",function(){
+  var cards=document.querySelectorAll(".card");
+  for(var i=0;i<cards.length;i++){
+    (function(c){c.addEventListener("click",function(){startGame(c.getAttribute("data-key"));});})(cards[i]);
+  }
+  S("btnBack").addEventListener("click",goTitle);
+  S("btnSpeak").addEventListener("click",doSpeak);
+  S("btnHint").addEventListener("click",doHint);
+  S("btnRepeat").addEventListener("click",doRepeat);
+  S("btnNext").addEventListener("click",doNext);
+  S("btnReplay").addEventListener("click",goTitle);
+  S("shareBtn").addEventListener("click",function(){
+    shareToLine("🌸 にほんごれんしゅう 毎日練習中！
+今日の連続記録: "+streak+"日 🔥
+あなたも試してみて！
+"+LIFF_URL);
+  });
+  S("shareClear").addEventListener("click",function(){
+    shareToLine("🎉 にほんごれんしゅう クリア！
+"+SC[cur].label+" で "+S("scVal").textContent+"点 獲得！
+連続"+streak+"日目 🔥
+"+LIFF_URL);
+  });
+  initLiff();
+});
+
+})();
+</script>
+</body>
+</html>
