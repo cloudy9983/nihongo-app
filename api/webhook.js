@@ -6,7 +6,7 @@ const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
-const LIFF_URL = process.env.LIFF_URL || "https://liff.line.me/YOUR_LIFF_ID";
+const LIFF_URL = process.env.LIFF_URL || "https://liff.line.me/2009384132-D77yjbS4";
 const client = new line.Client(config);
 
 // ---- User ID ストレージ (Vercel Blob, 無料1GB) ----
