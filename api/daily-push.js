@@ -6,7 +6,7 @@ const client = new line.Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 });
-const LIFF_URL = process.env.LIFF_URL || "https://liff.line.me/YOUR_LIFF_ID";
+const LIFF_URL = process.env.LIFF_URL || "https://liff.line.me/2009384132-D77yjbS4";
 
 // ランダムに今日のおすすめシナリオを選ぶ
 const SCENARIOS = [
