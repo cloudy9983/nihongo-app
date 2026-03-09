@@ -337,30 +337,31 @@ function updateCardBadges(){
 
 // ===== LIFF INIT =====
 function initLiff(){
-  if(LIFF_ID==="2009384132-D77yjbS4"){
-    // Dev mode: skip LIFF
+  // 直接顯示遊戲，不強制 LINE 登入
+  function showGame(){
     S("loadScreen").className="screen";
     S("titleScreen").className="screen active";
     loadStreak();
+  }
+
+  if(typeof liff==="undefined"){
+    showGame();
     return;
   }
+
   liff.init({liffId:LIFF_ID}).then(function(){
-    S("loadScreen").className="screen";
-    S("titleScreen").className="screen active";
-    loadStreak();
-    if(liff.isLoggedIn()){
+    showGame();
+    // LINE アプリ内 かつ ログイン済みの場合だけプロフィールを表示
+    if(liff.isInClient && liff.isInClient() && liff.isLoggedIn()){
       liff.getProfile().then(function(p){
         S("userName").textContent=p.displayName;
         S("userAva").src=p.pictureUrl||"";
         flex("userBar");
       }).catch(function(){});
-    } else {
-      liff.login();
     }
   }).catch(function(e){
-    S("loadScreen").className="screen";
-    S("titleScreen").className="screen active";
-    loadStreak();
+    // LIFF エラーでもゲームは動く
+    showGame();
     console.log("LIFF init error:",e);
   });
 }
